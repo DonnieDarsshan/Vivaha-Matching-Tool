@@ -21,6 +21,129 @@ h1{
   padding:14px;
   margin-bottom:18px;
 }
+
+
+
+
+
+
+
+
+
+/* ================= KUNDALI (Transit Mixer Theme) ================= */
+
+.kundali{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    grid-template-rows:repeat(4,auto);
+
+    width:650px;
+
+    gap:2px;
+
+    background:#ffcc00;
+    border:2px solid #ffcc00;
+}
+
+.kundali:empty{
+    background:#000;     /* when nothing rendered */
+}
+
+
+
+
+
+
+
+
+
+
+
+
+.house{
+    background:#2b0000;
+
+    position:relative;
+
+    padding-top:26px;
+    padding-left:6px;
+    padding-right:6px;
+
+    display:flex;
+    flex-direction:column;
+	
+    align-items:center;
+
+    font-size:14px;
+
+    font-family:
+      "Segoe UI",
+      "Noto Sans",
+      "DejaVu Sans",
+      Arial,
+      sans-serif;
+	  min-height:120px;
+}
+
+
+
+
+
+
+
+.house-num{
+    display:none;
+}
+.center-box{
+    grid-column:2/4;
+    grid-row:2/4;
+
+    background:#000;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    color:#ffcc00;
+    font-weight:bold;
+}
+
+/* ASC line */
+.asc-line{
+    color:#ffcc00;
+    font-weight:900;
+    font-size:16px;
+}
+
+/* Male / Female */
+.male{
+    color:#60a5fa;
+    font-weight:bold;
+}
+
+.female{
+    color:#f472b6;
+    font-weight:bold;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 table{
   width:100%;
   border-collapse:collapse;
@@ -120,7 +243,7 @@ select,input{
 #guna36Table{
   width:100%;
   border-collapse:collapse;
-  font-size:13px;
+  font-size:14px;
 }
 
 #guna36Table th,
@@ -156,7 +279,18 @@ select,input{
 
 
 
+#kpCounterD1,
+#kpCounterD9{
+  width:320px;
+  table-layout:fixed;
+}
 
+#kpCounterD1 th,
+#kpCounterD9 th,
+#kpCounterD1 td,
+#kpCounterD9 td{
+  width:33%;
+}
 
 
 
@@ -206,7 +340,7 @@ select,input{
 	  
 	  
 	  <label>
-	  <input type="checkbox" id="sign2sign">
+	  <input type="checkbox" id="sign2sign" onchange="recalcKPCounters()">
 	  Sign to Sign
 	</label>
 
@@ -235,6 +369,92 @@ select,input{
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- ================= KUNDALI ================= -->
+
+<div class="panel">
+
+<h2 style="text-align:center">Combined Kundali</h2>
+
+<div style="display:flex;gap:20px;align-items:flex-start">
+
+<div>
+<div id="kundaliChart" class="kundali"></div>
+</div>
+
+<div>
+
+<div style="margin-bottom:8px;font-weight:900">
+<label><input type="checkbox" id="modeMF" onchange="recalcKPCounters()"> Male → Female</label>
+<label style="margin-left:14px"><input type="checkbox" id="modeFM" onchange="recalcKPCounters()"> Female → Male</label>
+</div>
+
+
+
+
+
+<table id="kpCounterD1">
+<thead>
+<tr>
+<th>Planet</th>
+<th>Count</th>
+<th>Sign2Sign</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+
+</div>
+
+</div>
+
+
+
+</div>
+
+<!-- ================= NAVAMSHA KUNDALI ================= -->
+
+<div class="panel">
+
+<h2 style="text-align:center">Combined Navamsha (D9) Kundali</h2>
+
+<div style="display:flex;gap:20px;align-items:flex-start">
+
+<div>
+<div id="navamshaChart" class="kundali"></div>
+</div>
+
+<div>
+
+<table id="kpCounterD9">
+<thead>
+<tr>
+<th>Planet</th>
+<th>Count</th>
+<th>Sign2Sign</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
 
 
 
@@ -3041,6 +3261,20 @@ updateTable6Visibility();
 
 
 <script>
+
+
+
+/* ===================== KUNDALI DATA ===================== */
+
+let maleChartData = null;
+let femaleChartData = null;
+
+
+
+
+
+
+
 /* ===================== UNIVERSAL SWISS JSON SUPPORT ===================== */
 
 
@@ -3185,6 +3419,24 @@ function calcVimshottariProgress(natalDeg, dobUtc){
 
 /* APPLY JSON TO COLUMN */
 function applySwissJson(json, columnIndex){
+
+
+
+if(columnIndex === 1){
+  maleChartData = json;
+}
+if(columnIndex === 2){
+  femaleChartData = json;
+}
+
+renderKundali();
+renderNavamsha();
+recalcKPCounters();
+
+
+
+
+
   IS_SWISS_LOADING = true;
   
   
@@ -3425,12 +3677,625 @@ function loadFemaleSwiss(){
     r.readAsText(e.target.files[0]);
   };
 }
+
+
+
+
+
+
+
+/* ===================== RENDER KUNDALI ===================== */
+
+function degToText(d){
+  const deg = Math.floor(d%30);
+  const min = Math.floor((d%1)*60);
+  return deg+"°"+min.toString().padStart(2,"0");
+}
+
+
+
+/* ================= NAVAMSHA SIGN CALC ================= */
+
+function getNavamshaSign(deg){
+  return degreeToPada(deg) % 12;
+}
+
+
+
+
+function renderKundali(){
+
+const k=document.getElementById("kundaliChart");
+if(!k) return;
+
+k.innerHTML="";
+
+const houses = Array(12).fill().map(()=>[]);
+
+const planetOrder=[
+"Surya","Chandra","Mangala","Budha",
+"Jupiter","Venus","Saturn","Rahu","Ketu"
+];
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function degToText(d){
+const deg=Math.floor(d%30);
+const min=Math.floor((d%1)*60);
+return deg+"°"+min.toString().padStart(2,"0");
+}
+
+function process(data,tag,cls){
+
+if(!data) return;
+
+const ay=data.ayanamshas?.Lahiri || data.ayanamshas?.["KP New"];
+if(!ay) return;
+
+const planets=ay.planets;
+
+/* ASC */
+
+const asc=ay.lagna;
+const ascSign=Math.floor(asc/30);
+
+houses[ascSign].push({
+text:`${tag} - ASC ${degToText(asc)}`,
+deg:asc%30,
+cls:"asc-line"
+});
+
+/* PLANETS */
+
+planetOrder.forEach(p=>{
+
+let d;
+
+if(p==="Rahu"){
+d = planets.Rahu_true ?? planets.Rahu;
+}
+else if(p==="Ketu"){
+d = planets.Ketu_true ?? planets.Ketu;
+}
+else{
+d = planets[p];
+}
+
+if(d===undefined) return;
+
+const sign=Math.floor(d/30);
+
+houses[sign].push({
+text:`${tag} - ${p} - ${degToText(d)}`,
+deg:d%30,
+cls:cls
+});
+
+});
+
+}
+
+process(maleChartData,"M","male");
+process(femaleChartData,"F","female");
+
+/* SORTING */
+
+for(let i=0;i<12;i++){
+
+if(i<=5){
+houses[i].sort((a,b)=>a.deg-b.deg);
+}
+else{
+houses[i].sort((a,b)=>b.deg-a.deg);
+}
+
+}
+
+/* SOUTH INDIAN GRID */
+
+const map=[11,0,1,2,10,-1,-1,3,9,-1,-1,4,8,7,6,5];
+
+map.forEach(idx=>{
+
+if(idx===-1){
+
+const c=document.createElement("div");
+c.className="center-box";
+
+if(!maleChartData && !femaleChartData){
+c.innerText="Load Charts";
+}else{
+c.innerText="Kundali";
+}
+
+k.appendChild(c);
+return;
+
+}
+
+const h=document.createElement("div");
+h.className="house";
+
+h.innerHTML=`<div class="house-num">${idx+1}</div>`;
+
+houses[idx].forEach(it=>{
+
+const d=document.createElement("div");
+d.className=it.cls;
+d.innerText=it.text;
+
+h.appendChild(d);
+
+});
+
+k.appendChild(h);
+
+});
+
+}
+
+
+
+/* ===================== RENDER NAVAMSHA ===================== */
+
+function renderNavamsha(){
+
+const k=document.getElementById("navamshaChart");
+if(!k) return;
+
+k.innerHTML="";
+
+const houses = Array(12).fill().map(()=>[]);
+
+const planetOrder=[
+"Surya","Chandra","Mangala","Budha",
+"Jupiter","Venus","Saturn","Rahu","Ketu"
+];
+
+function process(data,tag,cls){
+
+if(!data) return;
+
+const ay=data.ayanamshas?.Lahiri || data.ayanamshas?.["KP New"];
+if(!ay) return;
+
+const planets=ay.planets;
+
+/* ASC */
+
+const asc=ay.lagna;
+const ascNav=getNavamshaSign(asc);
+
+houses[ascNav].push({
+text:`${tag} - ASC ${degToText((asc%30*9)%30)}`,
+deg:(asc%30*9)%30,
+cls:"asc-line"
+});
+
+/* PLANETS */
+
+planetOrder.forEach(p=>{
+
+let d;
+
+if(p==="Rahu"){
+d = planets.Rahu_true ?? planets.Rahu;
+}
+else if(p==="Ketu"){
+d = planets.Ketu_true ?? planets.Ketu;
+}
+else{
+d = planets[p];
+}
+
+if(d===undefined) return;
+
+const navSign=getNavamshaSign(d);
+
+houses[navSign].push({
+text:`${tag} - ${p} - ${degToText(d%30)}`,
+deg:(d*9)%30,
+cls:cls
+});
+
+});
+
+}
+
+process(maleChartData,"M","male");
+process(femaleChartData,"F","female");
+
+/* SORTING */
+
+for(let i=0;i<12;i++){
+
+if(i<=5){
+houses[i].sort((a,b)=>a.deg-b.deg);
+}
+else{
+houses[i].sort((a,b)=>b.deg-a.deg);
+}
+
+}
+
+/* SOUTH INDIAN GRID */
+
+const map=[11,0,1,2,10,-1,-1,3,9,-1,-1,4,8,7,6,5];
+
+map.forEach(idx=>{
+
+if(idx===-1){
+
+const c=document.createElement("div");
+c.className="center-box";
+
+if(!maleChartData && !femaleChartData){
+c.innerText="Load Charts";
+}else{
+c.innerText="Navamsha";
+}
+
+k.appendChild(c);
+return;
+
+}
+
+const h=document.createElement("div");
+h.className="house";
+
+h.innerHTML=`<div class="house-num">${idx+1}</div>`;
+
+houses[idx].forEach(it=>{
+
+const d=document.createElement("div");
+d.className=it.cls;
+d.innerText=it.text;
+
+h.appendChild(d);
+
+});
+
+k.appendChild(h);
+
+});
+
+}
+
+
+
+
+
+
+/* ================= KP PLANET COUNTER ================= */
+
+const KP_PLANETS = [
+"ASC","Surya","Chandra","Mangala","Budha",
+"Jupiter","Venus","Saturn","Rahu","Ketu"
+];
+
+function getSign(d){
+return Math.floor(d/30);
+}
+
+function getHouseSignToSign(from,to){
+return ((to-from+12)%12)+1;
+}
+
+function getHouseDegree(fromDeg,toDeg){
+const diff = ((toDeg-fromDeg+360)%360);
+return Math.floor(diff/30)+1;
+}
+
+function buildCounter(tableId,fromData,toData,isNav){
+
+const table=document.querySelector(`#${tableId} tbody`);
+if(!table) return;
+
+table.innerHTML="";
+
+const ayFrom=fromData?.ayanamshas?.Lahiri || fromData?.ayanamshas?.["KP New"];
+const ayTo=toData?.ayanamshas?.Lahiri || toData?.ayanamshas?.["KP New"];
+if(!ayFrom || !ayTo) return;
+
+const pFrom=ayFrom.planets;
+const pTo=ayTo.planets;
+
+KP_PLANETS.forEach(p=>{
+
+let dFrom;
+let dTo;
+
+if(p==="ASC"){
+dFrom=ayFrom.lagna;
+dTo=ayTo.lagna;
+}
+else if(p==="Rahu"){
+dFrom=pFrom.Rahu_true ?? pFrom.Rahu;
+dTo=pTo.Rahu_true ?? pTo.Rahu;
+}
+else if(p==="Ketu"){
+dFrom=pFrom.Ketu_true ?? pFrom.Ketu;
+dTo=pTo.Ketu_true ?? pTo.Ketu;
+}
+else{
+dFrom=pFrom[p];
+dTo=pTo[p];
+}
+
+if(isNav){
+dFrom=((dFrom%30)*9)%30 + getNavamshaSign(dFrom)*30;
+dTo=((dTo%30)*9)%30 + getNavamshaSign(dTo)*30;
+}
+
+
+
+
+
+
+
+
+
+let house;
+
+if(document.getElementById("sign2sign")?.checked){
+
+house=getHouseSignToSign(
+getSign(dFrom),
+getSign(dTo)
+);
+
+}else{
+
+house=getHouseDegree(dFrom,dTo);
+
+}
+
+const tr=document.createElement("tr");
+
+
+
+
+
+
+
+
+/* ===== SIGN2SIGN CALC (ALWAYS SIGN BASED) ===== */
+
+/* ===== TRUE SIGN2SIGN (DIRECTION BASED) ===== */
+
+const fromSign = getSign(dFrom);
+const toSign   = getSign(dTo);
+
+const s1 = ((toSign - fromSign + 12) % 12) + 1;
+const s2 = ((fromSign - toSign + 12) % 12) + 1;
+
+const s2s = `${s1}-${s2}`;
+
+tr.innerHTML=`
+<td>${p}</td>
+<td>${house}</td>
+<td>${s2s}</td>
+`;
+
+
+
+
+
+table.appendChild(tr);
+
+});
+
+}
+
+
+
+
+
+
+
+function recalcKPCounters(){
+
+const mf = document.getElementById("modeMF")?.checked;
+const fm = document.getElementById("modeFM")?.checked;
+
+if(!maleChartData || !femaleChartData){
+return;
+}
+
+/* ===== MALE → FEMALE ===== */
+if(mf){
+
+buildCounter(
+"kpCounterD1",
+maleChartData,
+femaleChartData,
+false
+);
+
+buildCounter(
+"kpCounterD9",
+maleChartData,
+femaleChartData,
+true
+);
+
+}
+
+/* ===== FEMALE → MALE ===== */
+else if(fm){
+
+buildCounter(
+"kpCounterD1",
+femaleChartData,
+maleChartData,
+false
+);
+
+buildCounter(
+"kpCounterD9",
+femaleChartData,
+maleChartData,
+true
+);
+
+}
+
+}
+
+
+
+
+
+
+
+
+
+
+
 </script>
 
 
 
 
 
+<script>
+
+
+
+
+
+
+
+
+
+
+
+
+/* ===================== SYSTEM MODE EXCLUSIVE ===================== */
+
+const vedicMode = document.querySelector('input[name="sys"][value="vedic"]');
+const kpMode = document.querySelector('input[name="sys"][value="kp"]');
+const signMode = document.getElementById("sign2sign");
+
+/* VEDIC CLICK */
+vedicMode.addEventListener("change",()=>{
+  if(vedicMode.checked){
+    kpMode.checked=false;
+    signMode.checked=false;
+  }
+  recalcKPCounters();
+});
+
+/* KP CLICK */
+kpMode.addEventListener("change",()=>{
+  if(kpMode.checked){
+    vedicMode.checked=false;
+    signMode.checked=false;
+  }
+  recalcKPCounters();
+});
+
+/* SIGN CLICK */
+signMode.addEventListener("change",()=>{
+  if(signMode.checked){
+    vedicMode.checked=false;
+    kpMode.checked=false;
+  }
+  recalcKPCounters();
+});
+
+</script>
+
+
+
+
+
+<script>
+
+
+
+
+
+
+
+
+
+
+/* ===================== MATCH DIRECTION LOCKED TOGGLE ===================== */
+
+const modeMF = document.getElementById("modeMF");
+const modeFM = document.getElementById("modeFM");
+
+/* MALE → FEMALE */
+modeMF.addEventListener("change",()=>{
+
+  if(modeMF.checked){
+    modeFM.checked = false;
+  }else{
+    // prevent both off
+    modeMF.checked = true;
+  }
+
+  recalcKPCounters();
+});
+
+/* FEMALE → MALE */
+modeFM.addEventListener("change",()=>{
+
+  if(modeFM.checked){
+    modeMF.checked = false;
+  }else{
+    // prevent both off
+    modeFM.checked = true;
+  }
+
+  recalcKPCounters();
+});
+
+</script>
+
+
+
+<script>
+
+/* ===================== DEFAULT MATCH MODE ===================== */
+
+window.addEventListener("DOMContentLoaded",()=>{
+
+const mf=document.getElementById("modeMF");
+const fm=document.getElementById("modeFM");
+
+if(!mf.checked && !fm.checked){
+mf.checked=true;
+}
+
+});
+
+</script>
+
+
+
+
+
+
+<script>
+renderKundali();
+renderNavamsha();
+recalcKPCounters();
+</script>
 
 </body>
 </html>
